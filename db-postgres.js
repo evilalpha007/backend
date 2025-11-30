@@ -3,6 +3,14 @@ const { Pool } = require('pg');
 // Use DATABASE_URL from environment (Render provides this automatically)
 // For local testing, set DATABASE_URL in .env file
 const isRenderDb = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com');
+
+console.log('DB Connection Config:');
+console.log('- URL Provided:', !!process.env.DATABASE_URL);
+if (process.env.DATABASE_URL) {
+  console.log('- URL Host:', process.env.DATABASE_URL.split('@')[1]); // Log host only for safety
+}
+console.log('- SSL Enabled:', isRenderDb || process.env.NODE_ENV === 'production');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: isRenderDb || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
