@@ -214,6 +214,11 @@ app.get('/api/me', async (req, res) => {
 app.post('/api/me/avatar', requireLogin, avatarUpload.single('avatar'), async (req, res) => {
   try {
     const userId = req.session.userId;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+    
     const filePath = '/uploads/avatars/' + req.file.filename;
 
     await runQuery(
@@ -223,8 +228,8 @@ app.post('/api/me/avatar', requireLogin, avatarUpload.single('avatar'), async (r
 
     res.json({ message: 'Avatar updated.', avatarUrl: filePath });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update avatar.' });
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ error: 'Failed to update avatar: ' + err.message });
   }
 });
 // ---------- Update personal details (age, height, weight, bio) ----------
