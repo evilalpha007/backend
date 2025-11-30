@@ -1,0 +1,329 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily OV Fitness Freaks League</title>
+
+  <!-- Prevent caching/back -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      position: relative;
+      min-height: 100vh;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+      top: -250px;
+      right: -250px;
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+      z-index: 0;
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, transparent 70%);
+      bottom: -200px;
+      left: -200px;
+      border-radius: 50%;
+      animation: float 10s ease-in-out infinite reverse;
+      z-index: 0;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, 30px); }
+    }
+    
+    .glass-header {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .nav-link {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #8b5cf6, #ec4899);
+      transition: width 0.3s ease;
+    }
+    
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    
+    .radio-option {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .radio-option:hover {
+      border-color: rgba(139, 92, 246, 0.5);
+      background: rgba(139, 92, 246, 0.1);
+    }
+    
+    .radio-option input:checked + label {
+      border-color: rgba(139, 92, 246, 0.8);
+      background: rgba(139, 92, 246, 0.2);
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-label {
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px dashed rgba(139, 92, 246, 0.5);
+      padding: 40px 20px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .file-input-label:hover {
+      border-color: rgba(139, 92, 246, 0.8);
+      background: rgba(139, 92, 246, 0.1);
+    }
+    
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+    
+    .gym-button {
+      background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .gym-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .gym-button:hover::before {
+      left: 100%;
+    }
+    
+    .gym-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+    }
+    
+    .upload-icon {
+      font-size: 3rem;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+</head>
+<body class="m-0">
+
+<header class="glass-header py-4 px-6 md:py-3 md:px-4 flex flex-wrap justify-between items-center relative z-10 sticky top-0">
+  <div class="flex items-center gap-3">
+    <span class="text-3xl">📤</span>
+    <span class="text-xl md:text-lg font-bold leading-none bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+      Daily Upload
+    </span>
+  </div>
+
+  <nav class="flex flex-wrap gap-5 md:gap-3">
+    <a href="index.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Leaderboard</a>
+    <a href="upload.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Daily Upload</a>
+    <a href="quest.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Weekly Quest</a>
+    <a href="profile.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Profile</a>
+    <a href="admin.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Admin</a>
+    <a href="/api/logout" class="nav-link no-underline text-red-300 text-sm font-medium hover:text-red-200">Logout</a>
+  </nav>
+</header>
+
+<main class="p-6 md:p-4 max-w-[700px] mx-auto relative z-10">
+  <div class="text-center mb-8">
+    <div class="upload-icon mb-4">💪</div>
+    <h1 class="m-0 mb-2 text-3xl md:text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+      Daily Upload
+    </h1>
+    <p class="text-gray-300 text-base md:text-sm">
+      Upload proof of today's workout. Show your dedication! 🔥
+    </p>
+  </div>
+
+  <div class="glass-card p-6 md:p-5 rounded-2xl">
+    <form id="upload-form" enctype="multipart/form-data" class="space-y-6">
+      
+      <div>
+        <label class="block mb-3 text-sm font-medium text-gray-200">Workout Type</label>
+        <div class="flex flex-wrap gap-3">
+          <label class="radio-option flex items-center gap-2 flex-1 min-w-[140px]">
+            <input type="radio" name="workoutType" value="gym" checked class="text-purple-500">
+            <span class="font-medium">🏋️ Gym</span>
+          </label>
+          <label class="radio-option flex items-center gap-2 flex-1 min-w-[140px]">
+            <input type="radio" name="workoutType" value="home" class="text-purple-500">
+            <span class="font-medium">🏠 Home Workout</span>
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label class="block mb-3 text-sm font-medium text-gray-200">Choose File</label>
+        <div class="file-input-wrapper">
+          <label for="file-input" class="file-input-label">
+            <div class="text-5xl mb-3">📁</div>
+            <div class="text-purple-300 font-medium mb-1">Click to upload</div>
+            <div class="text-gray-400 text-sm" id="file-name">No file selected</div>
+          </label>
+          <input type="file" id="file-input" name="file" required>
+        </div>
+      </div>
+
+      <div id="note" class="text-sm text-gray-400 bg-white/5 p-3 rounded-lg border border-white/10">
+        📸 Gym: photo or video allowed
+      </div>
+
+      <button type="submit" class="gym-button w-full py-3.5 px-4 border-none rounded-lg text-white text-base font-semibold cursor-pointer">
+        Upload Workout
+      </button>
+    </form>
+
+    <p id="msg" class="mt-4 text-sm text-center text-purple-300"></p>
+  </div>
+</main>
+
+<script>
+// Back/forward cache reload
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+// Check login
+async function checkLogin() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+  if (!data.user) {
+    window.location.replace('login.html');
+    return false;
+  }
+  return true;
+}
+
+checkLogin();
+
+// Change accepted file type based on workoutType
+const fileInput = document.getElementById('file-input');
+const note = document.getElementById('note');
+
+function updateAccept() {
+  const type = document.querySelector('input[name="workoutType"]:checked').value;
+  if (type === 'home') {
+    fileInput.accept = 'video/*';
+    note.textContent = 'Home workout: only video files are allowed.';
+  } else {
+    fileInput.accept = 'image/*,video/*';
+    note.textContent = 'Gym: photo or video allowed.';
+  }
+}
+
+document.querySelectorAll('input[name="workoutType"]').forEach(r => {
+  r.addEventListener('change', updateAccept);
+});
+
+// initial state
+updateAccept();
+
+// Handle daily upload
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const msg = document.getElementById('msg');
+  msg.textContent = '';
+
+  const selectedType = document.querySelector('input[name="workoutType"]:checked').value;
+  const file = fileInput.files[0];
+
+  if (!file) {
+    msg.textContent = 'Please choose a file.';
+    return;
+  }
+
+  // Front-end safety: home workout must be video
+  if (selectedType === 'home' && !file.type.startsWith('video/')) {
+    msg.textContent = 'Home workout requires a video file.';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('workoutType', selectedType);
+
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+  msg.textContent = data.message || data.error || '';
+});
+</script>
+
+</body>
+</html>

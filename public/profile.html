@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>User Profile – League</title>
+
+  <!-- Prevent caching/back -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      position: relative;
+      min-height: 100vh;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+      top: -250px;
+      right: -250px;
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+      z-index: 0;
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, transparent 70%);
+      bottom: -200px;
+      left: -200px;
+      border-radius: 50%;
+      animation: float 10s ease-in-out infinite reverse;
+      z-index: 0;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(30px, 30px); }
+    }
+    
+    .glass-header {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .glass-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+    
+    .glass-input {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: all 0.3s ease;
+    }
+    
+    .glass-input:focus {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(139, 92, 246, 0.5);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+    
+    .nav-link {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #8b5cf6, #ec4899);
+      transition: width 0.3s ease;
+    }
+    
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    
+    .avatar-glow {
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+      animation: pulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); }
+      50% { box-shadow: 0 0 50px rgba(236, 72, 153, 0.6); }
+    }
+    
+    .stat-badge {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      padding: 12px 20px;
+      border-radius: 12px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    
+    .gym-button {
+      background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .gym-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    
+    .gym-button:hover::before {
+      left: 100%;
+    }
+    
+    .gym-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+    }
+    
+    .media-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    
+    .media-card:hover {
+      transform: scale(1.02);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+  </style>
+</head>
+<body class="m-0">
+
+<header class="glass-header py-4 px-6 md:py-3 md:px-4 flex flex-wrap justify-between items-center relative z-10 sticky top-0">
+  <div class="flex items-center gap-3">
+    <span class="text-3xl">👤</span>
+    <span class="text-xl md:text-lg font-bold leading-none bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+      Profile
+    </span>
+  </div>
+
+  <nav class="flex flex-wrap gap-5 md:gap-3">
+    <a href="index.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Leaderboard</a>
+    <a href="upload.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Daily Upload</a>
+    <a href="quest.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Weekly Quest</a>
+    <a href="profile.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Profile</a>
+    <a href="admin.html" class="nav-link no-underline text-white text-sm font-medium hover:text-purple-300">Admin</a>
+    <a href="/api/logout" class="nav-link no-underline text-red-300 text-sm font-medium hover:text-red-200">Logout</a>
+  </nav>
+</header>
+
+<main class="p-6 md:p-4 max-w-[1100px] mx-auto relative z-10">
+  <div class="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mb-8">
+    
+    <!-- Avatar & Identity Card -->
+    <div class="glass-card p-6 rounded-2xl text-center">
+      <div class="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-5xl mx-auto mb-4 overflow-hidden avatar-glow" id="avatar-circle">
+        <!-- avatar image OR first letter -->
+      </div>
+      <h2 id="avatar-name" class="text-2xl font-bold mb-1 bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">User</h2>
+      <p id="avatar-email" class="text-gray-400 text-sm mb-4"></p>
+
+      <!-- Avatar upload form (own profile only) -->
+      <form id="avatar-form" enctype="multipart/form-data" style="display:none;" class="mt-4">
+        <label for="avatar-input" class="block text-sm mb-2 text-gray-300">Change Avatar</label>
+        <input type="file" id="avatar-input" name="avatar" accept="image/*" class="w-full text-sm mb-3 p-2 glass-input rounded-lg text-white">
+        <button type="submit" class="gym-button w-full py-2 px-4 border-none rounded-lg text-white text-sm font-semibold cursor-pointer">
+          Upload Avatar
+        </button>
+        <div id="avatar-msg" class="mt-2 text-sm text-purple-300"></div>
+      </form>
+    </div>
+
+    <!-- Stats & Details Card -->
+    <div class="glass-card p-6 rounded-2xl">
+      <h1 id="profile-title" class="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Profile</h1>
+      
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="stat-badge">
+          <div class="text-3xl font-bold text-purple-300" id="points">0</div>
+          <div class="text-sm text-gray-400 mt-1">Total Points</div>
+        </div>
+        <div class="stat-badge">
+          <div class="text-3xl font-bold text-pink-300" id="target-days">0</div>
+          <div class="text-sm text-gray-400 mt-1">Days/Week</div>
+        </div>
+      </div>
+
+      <div class="bg-white/5 p-4 rounded-lg mb-6 border border-white/10">
+        <p id="basic-info" class="text-gray-300 text-sm">No personal details set yet.</p>
+      </div>
+
+      <!-- Editable details form (own profile only) -->
+      <form id="details-form" class="space-y-4" style="display:none;">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-200">Age (years)</label>
+          <input type="number" id="age-input" min="0" class="glass-input w-full p-3 rounded-lg text-white placeholder-gray-400">
+        </div>
+
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-200">Height (cm)</label>
+          <input type="number" id="height-input" min="0" step="0.1" class="glass-input w-full p-3 rounded-lg text-white placeholder-gray-400">
+        </div>
+
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-200">Weight (kg)</label>
+          <input type="number" id="weight-input" min="0" step="0.1" class="glass-input w-full p-3 rounded-lg text-white placeholder-gray-400">
+        </div>
+
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-200">Bio</label>
+          <textarea id="bio-input" rows="3" placeholder="Write something about your training..." class="glass-input w-full p-3 rounded-lg text-white placeholder-gray-400"></textarea>
+        </div>
+
+        <button type="submit" class="gym-button w-full py-3 px-4 border-none rounded-lg text-white text-base font-semibold cursor-pointer">
+          Save Details
+        </button>
+        <div id="details-msg" class="mt-2 text-sm text-center text-purple-300"></div>
+      </form>
+
+      <div id="readonly-note" class="text-sm text-gray-400 mt-4 p-3 bg-white/5 rounded-lg border border-white/10" style="display:none;">
+        📌 Viewing another user's profile. You can't edit their details.
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Uploads Section -->
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+      <span>📸</span>
+      <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Daily Uploads</span>
+    </h2>
+    <div id="daily-container" class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]"></div>
+  </div>
+
+  <!-- Weekly Quests Section -->
+  <div>
+    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+      <span>🎯</span>
+      <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Weekly Quests</span>
+    </h2>
+    <div id="quest-container" class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]"></div>
+  </div>
+</main>
+
+<script>
+// Back/forward cache reload
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+async function loadProfile() {
+  // Check who is logged in
+  const meRes = await fetch('/api/me');
+  const meData = await meRes.json();
+  if (!meData.user) {
+    window.location.replace('login.html');
+    return;
+  }
+  const currentUser = meData.user;
+
+  // Check if viewing self or another user
+  const params = new URLSearchParams(window.location.search);
+  const viewedId = params.get('userId');
+  const viewingOthers = viewedId && parseInt(viewedId, 10) !== currentUser.id;
+
+  let profileData;
+
+  if (viewingOthers) {
+    // View someone else's profile
+    const res = await fetch('/api/user/' + viewedId);
+    if (!res.ok) {
+      document.body.innerHTML = '<p style="padding:20px;">User not found.</p>';
+      return;
+    }
+    profileData = await res.json();
+  } else {
+    // View own profile
+    const uploadsRes = await fetch('/api/my-uploads');
+    if (!uploadsRes.ok) {
+      window.location.replace('login.html');
+      return;
+    }
+    const uploadsData = await uploadsRes.json();
+    profileData = {
+      user: {
+        id: currentUser.id,
+        username: currentUser.username,
+        email: currentUser.email,
+        avatarUrl: currentUser.avatarUrl,
+        age: currentUser.age,
+        heightCm: currentUser.heightCm,
+        weightKg: currentUser.weightKg,
+        bio: currentUser.bio,
+        totalPoints: currentUser.totalPoints,
+        targetDaysPerWeek: currentUser.targetDaysPerWeek
+      },
+      uploads: uploadsData.uploads,
+      questUploads: uploadsData.questUploads
+    };
+  }
+
+  const { user, uploads, questUploads } = profileData;
+
+  // ---------- Fill avatar area ----------
+  const avatarCircle = document.getElementById('avatar-circle');
+  const avatarName = document.getElementById('avatar-name');
+  const avatarEmail = document.getElementById('avatar-email');
+
+  avatarName.textContent = user.username;
+  avatarEmail.textContent = viewingOthers ? '' : (user.email || '');
+
+  if (user.avatarUrl) {
+    avatarCircle.innerHTML = `<img src="${user.avatarUrl}" alt="avatar" class="w-full h-full object-cover">`;
+  } else {
+    const initial = user.username ? user.username.charAt(0).toUpperCase() : '?';
+    avatarCircle.textContent = initial;
+  }
+
+  // ---------- Title & stats ----------
+  document.getElementById('profile-title').textContent =
+    viewingOthers ? `${user.username}'s Profile` : 'Your Profile';
+  document.getElementById('points').textContent = user.totalPoints ?? 0;
+  document.getElementById('target-days').textContent = user.targetDaysPerWeek ?? 0;
+
+  const basicInfo = [];
+  if (user.age) basicInfo.push(`Age: ${user.age}`);
+  if (user.heightCm) basicInfo.push(`Height: ${user.heightCm} cm`);
+  if (user.weightKg) basicInfo.push(`Weight: ${user.weightKg} kg`);
+  if (user.bio) basicInfo.push(`Bio: ${user.bio}`);
+  document.getElementById('basic-info').textContent = basicInfo.join(' • ') || 'No personal details set yet.';
+
+  // ---------- Own profile: show edit forms ----------
+  const avatarForm = document.getElementById('avatar-form');
+  const detailsForm = document.getElementById('details-form');
+  const readonlyNote = document.getElementById('readonly-note');
+
+  if (!viewingOthers) {
+    avatarForm.style.display = 'block';
+    detailsForm.style.display = 'block';
+    readonlyNote.style.display = 'none';
+
+    // Prefill details form
+    document.getElementById('age-input').value = user.age ?? '';
+    document.getElementById('height-input').value = user.heightCm ?? '';
+    document.getElementById('weight-input').value = user.weightKg ?? '';
+    document.getElementById('bio-input').value = user.bio ?? '';
+  } else {
+    avatarForm.style.display = 'none';
+    detailsForm.style.display = 'none';
+    readonlyNote.style.display = 'block';
+  }
+
+  // ---------- Daily uploads ----------
+  const dailyDiv = document.getElementById('daily-container');
+  if (!uploads || !uploads.length) {
+    dailyDiv.innerHTML = '<div class="glass-card p-6 rounded-xl text-center text-gray-400">No daily uploads yet. Start your journey! 💪</div>';
+  } else {
+    dailyDiv.innerHTML = '';
+    uploads.forEach(up => {
+      const card = document.createElement('div');
+      card.className = 'media-card p-4 rounded-xl';
+      const d = new Date(up.createdAt);
+
+      let mediaHTML;
+      if (up.type === 'photo') {
+        mediaHTML = `
+          <a class="block" href="viewer.html?file=${up.fileUrl}">
+            <img class="w-full h-48 object-cover rounded-lg mb-3" src="${up.fileUrl}" alt="Workout photo">
+          </a>
+        `;
+      } else {
+        mediaHTML = `
+          <video class="w-full h-48 object-cover rounded-lg mb-3" src="${up.fileUrl}" controls></video>
+          <div class="mb-2">
+            <a href="viewer.html?file=${up.fileUrl}" class="text-purple-300 text-sm no-underline hover:underline">Open video</a>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        ${mediaHTML}
+        <div class="flex justify-between items-center text-sm">
+          <span class="px-3 py-1 rounded-full ${up.status === 'approved' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'}">
+            ${up.points} pts • ${up.status}
+          </span>
+          <span class="text-gray-400">${d.toLocaleDateString()}</span>
+        </div>
+      `;
+      dailyDiv.appendChild(card);
+    });
+  }
+
+  // ---------- Weekly quests ----------
+  const questDiv = document.getElementById('quest-container');
+  if (!questUploads || !questUploads.length) {
+    questDiv.innerHTML = '<div class="glass-card p-6 rounded-xl text-center text-gray-400">No weekly quest history yet. Complete your first quest! 🎯</div>';
+  } else {
+    questDiv.innerHTML = '';
+    questUploads.forEach(q => {
+      const d = new Date(q.createdAt);
+
+      let mediaHTML = '';
+      if (q.fileUrl) {
+        mediaHTML = `<a href="viewer.html?file=${q.fileUrl}" class="text-purple-300 text-sm no-underline hover:underline">View uploaded file</a>`;
+      } else if (q.status === 'missed') {
+        mediaHTML = '<em class="text-gray-500 text-sm">No file (missed quest)</em>';
+      }
+
+      const card = document.createElement('div');
+      card.className = 'media-card p-4 rounded-xl';
+      card.innerHTML = `
+        <h3 class="text-xl font-bold mt-0 mb-3 text-purple-300">${q.title}</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Status:</span>
+            <span class="px-3 py-1 rounded-full ${q.status === 'completed' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}">${q.status}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Points:</span>
+            <span class="text-purple-300 font-semibold">${q.points}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Date:</span>
+            <span class="text-gray-300">${d.toLocaleDateString()}</span>
+          </div>
+          ${mediaHTML ? `<div class="pt-2">${mediaHTML}</div>` : ''}
+        </div>
+      `;
+      questDiv.appendChild(card);
+    });
+  }
+
+  // ---------- Attach handlers ONLY for own profile ----------
+  if (!viewingOthers) {
+    // Avatar upload
+    avatarForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('avatar-input');
+      const msg = document.getElementById('avatar-msg');
+
+      if (!fileInput.files.length) {
+        msg.textContent = 'Please choose an image.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('avatar', fileInput.files[0]);
+
+      const res = await fetch('/api/me/avatar', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      msg.textContent = data.message || data.error || '';
+
+      if (data.avatarUrl) {
+        avatarCircle.innerHTML = `<img src="${data.avatarUrl}" alt="avatar" class="w-full h-full object-cover">`;
+      }
+    });
+
+    // Details save
+    detailsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('details-msg');
+
+      const body = {
+        age: document.getElementById('age-input').value,
+        heightCm: document.getElementById('height-input').value,
+        weightKg: document.getElementById('weight-input').value,
+        bio: document.getElementById('bio-input').value
+      };
+
+      const res = await fetch('/api/me/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      msg.textContent = data.message || data.error || '';
+
+      // refresh basic info line
+      const refreshed = [];
+      if (body.age) refreshed.push(`Age: ${body.age}`);
+      if (body.heightCm) refreshed.push(`Height: ${body.heightCm} cm`);
+      if (body.weightKg) refreshed.push(`Weight: ${body.weightKg} kg`);
+      if (body.bio) refreshed.push(`Bio: ${body.bio}`);
+      document.getElementById('basic-info').textContent = refreshed.join(' • ') || 'No personal details set yet.';
+    });
+  }
+}
+
+loadProfile();
+</script>
+
+</body>
+</html>

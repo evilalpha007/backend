@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – OV Fitness Freaks League</title>
+
+  <!-- Prevent caching/back -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="font-sans bg-[#050509] text-white m-0">
+
+<header class="bg-[#15151f] py-2.5 px-4 md:py-2 md:px-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-1.5 md:gap-0">
+  <div>🛠 Admin – Weekly Quests</div>
+  <nav class="flex flex-wrap gap-2 md:gap-2">
+    <a href="index.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Leaderboard</a>
+    <a href="upload.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Daily Upload</a>
+    <a href="quest.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Weekly Quest</a>
+    <a href="profile.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Profile</a>
+    <a href="admin.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Admin</a>
+    <a href="/api/logout" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Logout</a>
+  </nav>
+</header>
+
+<main class="p-4 md:p-3 max-w-[1100px] mx-auto">
+  <h1 class="mt-0 text-[1.4rem]">Admin Panel</h1>
+  <p>Here you can create weekly quests and manage existing ones.</p>
+
+  <!-- CREATE QUEST FORM -->
+  <form id="quest-create-form" class="bg-[#15151f] p-4 md:p-3.5 rounded-[10px] mt-3">
+    <h2 class="mt-0 text-[1.2rem]">Create New Quest</h2>
+
+    <label class="block mt-2 mb-1 text-[0.9rem]">Title
+      <input type="text" name="title" required class="w-full p-1.5 border-none rounded bg-[#1e1e2b] text-white text-[0.85rem] mt-1">
+    </label>
+
+    <label class="block mt-2 mb-1 text-[0.9rem]">Description
+      <textarea name="description" rows="3" class="w-full p-1.5 border-none rounded bg-[#1e1e2b] text-white text-[0.85rem] mt-1"></textarea>
+    </label>
+
+    <label class="block mt-2 mb-1 text-[0.9rem]">Start Date (YYYY-MM-DD)
+      <input type="text" name="startDate" placeholder="2025-12-01" required class="w-full p-1.5 border-none rounded bg-[#1e1e2b] text-white text-[0.85rem] mt-1">
+    </label>
+
+    <label class="block mt-2 mb-1 text-[0.9rem]">End Date (YYYY-MM-DD)
+      <input type="text" name="endDate" placeholder="2025-12-07" required class="w-full p-1.5 border-none rounded bg-[#1e1e2b] text-white text-[0.85rem] mt-1">
+    </label>
+
+    <button type="submit" class="mt-3 py-1 px-2 border-none rounded bg-indigo-600 text-white text-[0.8rem] cursor-pointer hover:opacity-95">Create Quest</button>
+    <div id="msg" class="mt-2 text-[0.9rem]"></div>
+  </form>
+
+  <!-- QUEST LIST -->
+  <section class="mt-5">
+    <h2 class="text-[1.2rem]">All Quests</h2>
+    <p class="text-[0.9rem] text-[#aaa]">Active quests are currently running. Upcoming quests start in the future. Past quests have ended.</p>
+
+    <div class="w-full overflow-x-auto">
+      <table class="w-full border-collapse mt-2 min-w-[480px]">
+        <thead>
+          <tr>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Title</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Window</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Status</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Completed</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Missed</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="quests-body">
+          <tr><td colspan="6" class="p-2 text-[0.85rem]">Loading quests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- USERS LIST -->
+  <section class="mt-5">
+    <h2 class="text-[1.2rem]">All Users</h2>
+    <p class="text-[0.9rem] text-[#aaa]">Manage users in the league. Deleting a user will also remove their uploads and quest history.</p>
+
+    <div class="w-full overflow-x-auto">
+      <table class="w-full border-collapse mt-2 min-w-[480px]">
+        <thead>
+          <tr>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Username</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Email</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Points</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Uploads</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Quests</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Role</th>
+            <th class="p-2 md:p-1.5 border-b border-[#333] text-left text-[0.85rem] md:text-[0.8rem] font-bold">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-body">
+          <tr><td colspan="7" class="p-2 text-[0.85rem]">Loading users...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Back/forward cache reload
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+// Check login & admin, then load quests + users
+(async function initAdmin() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+  if (!data.user) {
+    window.location.replace('login.html');
+    return;
+  }
+  if (!data.user.isAdmin) {
+    document.body.innerHTML = '<p style="padding:20px;">You are not an admin.</p>';
+    return;
+  }
+  loadQuests();
+  loadUsers();
+})();
+
+// Create quest
+document.getElementById('quest-create-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+
+  const body = {
+    title: form.title.value,
+    description: form.description.value,
+    startDate: form.startDate.value,
+    endDate: form.endDate.value
+  };
+
+  const res = await fetch('/api/admin/quests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  document.getElementById('msg').textContent = data.message || data.error || '';
+
+  if (data.message) {
+    form.reset();
+    loadQuests();
+  }
+});
+
+// ---------- QUEST TABLE ----------
+async function loadQuests() {
+  const tbody = document.getElementById('quests-body');
+  tbody.innerHTML = '<tr><td colspan="6">Loading quests...</td></tr>';
+
+  const res = await fetch('/api/admin/quests');
+  const data = await res.json();
+
+  if (!data.quests || data.quests.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6">No quests created yet.</td></tr>';
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  tbody.innerHTML = '';
+  data.quests.forEach(q => {
+    let statusLabel = '';
+    let badgeClass = '';
+
+    if (today < q.startDate) {
+      statusLabel = 'Upcoming';
+      badgeClass = 'badge badge-upcoming';
+    } else if (today > q.endDate) {
+      statusLabel = 'Past';
+      badgeClass = 'badge badge-past';
+    } else {
+      statusLabel = 'Active';
+      badgeClass = 'badge badge-active';
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${q.title}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${q.startDate} → ${q.endDate}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]"><span class="${badgeClass}">${statusLabel}</span></td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${q.completedCount ?? 0}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${q.missedCount ?? 0}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">
+        <button class="py-1 px-2 md:py-1 md:px-1.5 border-none rounded bg-red-600 text-white text-[0.8rem] cursor-pointer hover:opacity-90" data-quest-id="${q.id}">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Attach delete handlers
+  tbody.querySelectorAll('button[data-quest-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-quest-id');
+      if (confirm('Delete this quest? This will also delete its submissions.')) {
+        deleteQuest(id);
+      }
+    });
+  });
+}
+
+async function deleteQuest(id) {
+  const res = await fetch('/api/admin/quests/' + id, {
+    method: 'DELETE'
+  });
+
+  const data = await res.json();
+  alert(data.message || data.error);
+  loadQuests();
+}
+
+// ---------- USERS TABLE ----------
+async function loadUsers() {
+  const tbody = document.getElementById('users-body');
+  tbody.innerHTML = '<tr><td colspan="7">Loading users...</td></tr>';
+
+  const res = await fetch('/api/admin/users');
+  const data = await res.json();
+
+  if (!data.users || data.users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7">No users found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  data.users.forEach(u => {
+    const role = u.isAdmin ? 'Admin' : 'User';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${u.username}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${u.email}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${u.totalPoints}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${u.uploadCount ?? 0}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${u.questCount ?? 0}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">${role}</td>
+      <td class="p-2 md:p-1.5 border-b border-[#333] text-[0.85rem] md:text-[0.8rem]">
+        <button class="py-1 px-2 md:py-1 md:px-1.5 border-none rounded bg-red-600 text-white text-[0.8rem] cursor-pointer hover:opacity-90" data-user-id="${u.id}">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Attach delete handlers
+  tbody.querySelectorAll('button[data-user-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-user-id');
+      if (confirm('Delete this user and all their data?')) {
+        deleteUser(id);
+      }
+    });
+  });
+}
+
+async function deleteUser(id) {
+  const res = await fetch('/api/admin/users/' + id, {
+    method: 'DELETE'
+  });
+
+  const data = await res.json();
+  alert(data.message || data.error);
+  loadUsers();
+}
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Quest – OV Fitness Freaks League</title>
+
+  <!-- Prevent caching/back -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="font-sans bg-[#050509] text-white m-0">
+
+<header class="bg-[#15151f] py-2.5 px-4 md:py-2 md:px-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-1.5 md:gap-0">
+  <div>🎯 Weekly Quest</div>
+  <nav class="flex flex-wrap gap-2 md:gap-2">
+    <a href="index.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Leaderboard</a>
+    <a href="upload.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Daily Upload</a>
+    <a href="quest.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Weekly Quest</a>
+    <a href="profile.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Profile</a>
+    <a href="admin.html" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Admin</a>
+    <a href="/api/logout" class="text-white ml-0 md:ml-2.5 no-underline text-[0.9rem] md:text-[0.8rem]">Logout</a>
+  </nav>
+</header>
+
+<main class="p-4 md:p-3 max-w-[800px] mx-auto">
+  <h1 class="mt-0 text-[1.4rem]">This Week's Quest</h1>
+
+  <div id="quest-box">
+    <p>Loading current quest...</p>
+  </div>
+
+  <form id="quest-form" enctype="multipart/form-data" style="display:none;" class="mt-2.5">
+    <label>Upload quest proof:
+      <input type="file" name="file" required class="mt-1.5">
+    </label>
+    <br><br>
+    <button type="submit" class="mt-2.5 py-2 px-3.5 border-none bg-indigo-600 text-white rounded cursor-pointer text-[0.9rem] md:w-full md:text-center hover:opacity-95">Submit Quest</button>
+  </form>
+
+  <p id="msg" class="mt-2.5 text-[0.9rem]"></p>
+</main>
+
+<script>
+// Back/forward cache reload
+window.addEventListener('pageshow', function (event) {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
+// Check login
+(async function checkLogin() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+  if (!data.user) {
+    window.location.replace('login.html');
+    return;
+  }
+  loadQuest();
+})();
+
+async function loadQuest() {
+  const res = await fetch('/api/current-quest');
+  const data = await res.json();
+  const box = document.getElementById('quest-box');
+  const form = document.getElementById('quest-form');
+
+  if (!data.quest) {
+    box.innerHTML = '<p>No active weekly quest right now. Check back later!</p>';
+    form.style.display = 'none';
+    return;
+  }
+
+  const q = data.quest;
+  box.innerHTML = `
+    <h2>${q.title}</h2>
+    <p>${q.description || ''}</p>
+    <p><strong>Reward:</strong> +5 points</p>
+    <p><strong>Quest window:</strong> ${q.startDate} to ${q.endDate}</p>
+  `;
+  form.style.display = 'block';
+}
+
+document.getElementById('quest-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+
+  const res = await fetch('/api/quest-upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await res.json();
+  document.getElementById('msg').textContent = data.message || data.error;
+});
+</script>
+
+</body>
+</html>

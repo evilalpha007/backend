@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>View Media</title>
+
+  <style>
+    body { background:#050509; color:white; margin:0; font-family:Arial; text-align:center; }
+    .container { padding:20px; }
+    button { 
+      background:#4f46e5; 
+      color:white; 
+      padding:10px 16px; 
+      border:none; 
+      border-radius:6px; 
+      cursor:pointer; 
+      margin-bottom:20px;
+    }
+    img, video {
+      max-width: 95%;
+      max-height: 85vh;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <button onclick="history.back()">← Back</button>
+    <div id="media"></div>
+  </div>
+
+<script>
+  // Get "?file=..." from URL
+  const params = new URLSearchParams(window.location.search);
+  const file = params.get('file');
+
+  if (!file) {
+    document.getElementById('media').innerHTML = "<p>No media selected.</p>";
+  } else {
+    // Detect if video or image
+    const ext = file.toLowerCase();
+    if (ext.endsWith('.mp4') || ext.endsWith('.mov') || ext.endsWith('.webm') || ext.endsWith('.mkv')) {
+      document.getElementById('media').innerHTML = `
+        <video src="${file}" controls></video>
+      `;
+    } else {
+      document.getElementById('media').innerHTML = `
+        <img src="${file}">
+      `;
+    }
+  }
+</script>
+
+</body>
+</html>
