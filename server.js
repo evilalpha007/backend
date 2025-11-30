@@ -7,7 +7,8 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const cron = require('node-cron');
 const path = require('path');
-const db = require('./db');
+const { pool, initializeDatabase, runQuery, getAll, getOne } = require('./db-postgres');
+const { uploadToCloudinary } = require('./cloudinary-config');
 
 const app = express();
 
@@ -37,35 +38,13 @@ app.use(session({
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- MULTER SETUP ----------
-// Daily uploads
-const dailyStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+// ---------- MULTER SETUP (Memory Storage for Cloudinary) ----------
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
   }
 });
-const dailyUpload = multer({ storage: dailyStorage });
-
-// Quest uploads
-const questStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/quests'),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  }
-});
-const questUpload = multer({ storage: questStorage });
-// Avatar uploads
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/avatars'),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
-  }
-});
-const avatarUpload = multer({ storage: avatarStorage });
 
 
 // ---------- HELPERS ----------
@@ -95,32 +74,7 @@ function getYearWeek(dateObj) {
 }
 
 
-function runQuery(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
-}
 
-function getAll(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, function (err, rows) {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-}
-
-function getOne(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, function (err, row) {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
-}
 
 function requireLogin(req, res, next) {
   if (!req.session.userId) {
@@ -131,7 +85,7 @@ function requireLogin(req, res, next) {
 
 async function getCurrentUser(req) {
   if (!req.session.userId) return null;
-  return await getOne(`SELECT * FROM users WHERE id = ?`, [req.session.userId]);
+  return await getOne(`SELECT * FROM users WHERE id = $1`, [req.session.userId]);
 }
 
 function requireAdmin(req, res, next) {
@@ -153,8 +107,8 @@ app.post('/api/signup', async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
 
     await runQuery(
-      `INSERT INTO users (username, email, passwordHash, targetDaysPerWeek)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO users (username, email, "passwordHash", "targetDaysPerWeek")
+       VALUES ($1, $2, $3, $4)`,
       [username, email, hash, targetDaysPerWeek || 3]
     );
 
@@ -168,7 +122,7 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await getOne(`SELECT * FROM users WHERE email = ?`, [email]);
+    const user = await getOne(`SELECT * FROM users WHERE email = $1`, [email]);
     if (!user) return res.status(401).send('Invalid email or password');
 
     const match = await bcrypt.compare(password, user.passwordHash);
@@ -196,22 +150,22 @@ app.get('/api/me', async (req, res) => {
         id,
         username,
         email,
-        avatarUrl,
+        "avatarUrl",
         age,
-        heightCm,
-        weightKg,
+        "heightCm",
+        "weightKg",
         bio,
-        totalPoints,
-        targetDaysPerWeek,
-        isAdmin
+        "totalPoints",
+        "targetDaysPerWeek",
+        "isAdmin"
      FROM users
-     WHERE id = ?`,
+     WHERE id = $1`,
     [req.session.userId]
   );
   res.json({ user });
 });
 // ---------- Update avatar ----------
-app.post('/api/me/avatar', requireLogin, avatarUpload.single('avatar'), async (req, res) => {
+app.post('/api/me/avatar', requireLogin, upload.single('avatar'), async (req, res) => {
   try {
     const userId = req.session.userId;
     
@@ -219,14 +173,15 @@ app.post('/api/me/avatar', requireLogin, avatarUpload.single('avatar'), async (r
       return res.status(400).json({ error: 'No file uploaded.' });
     }
     
-    const filePath = '/uploads/avatars/' + req.file.filename;
+    // Upload to Cloudinary
+    const fileUrl = await uploadToCloudinary(req.file.buffer, 'avatars', 'image');
 
     await runQuery(
-      `UPDATE users SET avatarUrl = ? WHERE id = ?`,
-      [filePath, userId]
+      `UPDATE users SET "avatarUrl" = $1 WHERE id = $2`,
+      [fileUrl, userId]
     );
 
-    res.json({ message: 'Avatar updated.', avatarUrl: filePath });
+    res.json({ message: 'Avatar updated.', avatarUrl: fileUrl });
   } catch (err) {
     console.error('Avatar upload error:', err);
     res.status(500).json({ error: 'Failed to update avatar: ' + err.message });
@@ -245,8 +200,8 @@ app.post('/api/me/details', requireLogin, async (req, res) => {
 
     await runQuery(
       `UPDATE users
-       SET age = ?, heightCm = ?, weightKg = ?, bio = ?
-       WHERE id = ?`,
+       SET age = $1, "heightCm" = $2, "weightKg" = $3, bio = $4
+       WHERE id = $5`,
       [age, heightCm, weightKg, bio || null, userId]
     );
 
@@ -263,9 +218,9 @@ app.post('/api/me/details', requireLogin, async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const rows = await getAll(
-      `SELECT id, username, totalPoints
+      `SELECT id, username, "totalPoints"
        FROM users
-       ORDER BY totalPoints DESC, username ASC`
+       ORDER BY "totalPoints" DESC, username ASC`
     );
     res.json(rows);
   } catch (err) {
@@ -277,7 +232,7 @@ app.get('/api/leaderboard', async (req, res) => {
 
 
 // ---------- DAILY UPLOAD ----------
-app.post('/api/upload', requireLogin, dailyUpload.single('file'), async (req, res) => {
+app.post('/api/upload', requireLogin, upload.single('file'), async (req, res) => {
   try {
     const now = new Date();
 
@@ -305,28 +260,29 @@ app.post('/api/upload', requireLogin, dailyUpload.single('file'), async (req, re
       return res.status(400).json({ error: 'Home workout uploads must be video only.' });
     }
 
-    const fileUrl = '/uploads/daily/' + req.file.filename;
+    // Upload to Cloudinary
+    const fileUrl = await uploadToCloudinary(req.file.buffer, 'daily', mediaType);
 
     // 4) Insert submission with workoutType
     await runQuery(
-      `INSERT INTO submissions (userId, fileUrl, type, workoutType, points, status)
-       VALUES (?, ?, ?, ?, ?, 'uploaded')`,
+      `INSERT INTO submissions ("userId", "fileUrl", type, "workoutType", points, status)
+       VALUES ($1, $2, $3, $4, $5, 'uploaded')`,
       [userId, fileUrl, mediaType, workoutType, DAILY_UPLOAD_POINTS]
     );
 
     // 5) Mark daily_status as uploaded (no penalty)
     const today = todayDateStr();
     await runQuery(
-      `INSERT INTO daily_status (userId, date, uploaded, pointsDelta)
-       VALUES (?, ?, 1, ?)
-       ON CONFLICT(userId, date)
-       DO UPDATE SET uploaded = 1, pointsDelta = ?`,
+      `INSERT INTO daily_status ("userId", date, uploaded, "pointsDelta")
+       VALUES ($1, $2, 1, $3)
+       ON CONFLICT ("userId", date)
+       DO UPDATE SET uploaded = 1, "pointsDelta" = $4`,
       [userId, today, DAILY_UPLOAD_POINTS, DAILY_UPLOAD_POINTS]
     );
 
     // 6) Add points to user
     await runQuery(
-      `UPDATE users SET totalPoints = totalPoints + ? WHERE id = ?`,
+      `UPDATE users SET "totalPoints" = "totalPoints" + $1 WHERE id = $2`,
       [DAILY_UPLOAD_POINTS, userId]
     );
 
@@ -350,7 +306,7 @@ app.post('/api/daily-off', requireLogin, async (req, res) => {
     // 1) Check if they already used off-day this week
     const existing = await getOne(
       `SELECT id FROM weekly_off_days
-       WHERE userId = ? AND year = ? AND week = ?`,
+       WHERE "userId" = $1 AND year = $2 AND week = $3`,
       [userId, year, week]
     );
 
@@ -362,17 +318,17 @@ app.post('/api/daily-off', requireLogin, async (req, res) => {
 
     // 2) Save this off day
     await runQuery(
-      `INSERT INTO weekly_off_days (userId, date, year, week)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO weekly_off_days ("userId", date, year, week)
+       VALUES ($1, $2, $3, $4)`,
       [userId, today, year, week]
     );
 
     // 3) Mark daily_status so cron knows there is NO penalty for today
     await runQuery(
-      `INSERT INTO daily_status (userId, date, uploaded, pointsDelta)
-       VALUES (?, ?, 0, 0)
-       ON CONFLICT(userId, date)
-       DO UPDATE SET uploaded = 0, pointsDelta = 0`,
+      `INSERT INTO daily_status ("userId", date, uploaded, "pointsDelta")
+       VALUES ($1, $2, 0, 0)
+       ON CONFLICT ("userId", date)
+       DO UPDATE SET uploaded = 0, "pointsDelta" = 0`,
       [userId, today]
     );
 
@@ -401,15 +357,15 @@ app.get('/api/current-quest', async (req, res) => {
   }
 });
 
-app.post('/api/quest-upload', requireLogin, questUpload.single('file'), async (req, res) => {
+app.post('/api/quest-upload', requireLogin, upload.single('file'), async (req, res) => {
   try {
     const userId = req.session.userId;
     const today = todayDateStr();
 
     const quest = await getOne(
       `SELECT * FROM quests
-       WHERE startDate <= ? AND endDate >= ?
-       ORDER BY startDate DESC
+       WHERE "startDate" <= $1 AND "endDate" >= $2
+       ORDER BY "startDate" DESC
        LIMIT 1`,
       [today, today]
     );
@@ -420,24 +376,30 @@ app.post('/api/quest-upload', requireLogin, questUpload.single('file'), async (r
 
     const existing = await getOne(
       `SELECT id FROM quest_submissions
-       WHERE questId = ? AND userId = ? AND status = 'approved'`,
+       WHERE "questId" = $1 AND "userId" = $2 AND status = 'approved'`,
       [quest.id, userId]
     );
     if (existing) {
       return res.status(400).json({ error: 'Quest already completed.' });
     }
 
-    const filePath = req.file ? '/uploads/quests/' + req.file.filename : null;
+    // Upload to Cloudinary if file exists
+    let fileUrl = null;
+    if (req.file) {
+      const mime = req.file.mimetype;
+      const mediaType = mime.startsWith('video/') ? 'video' : 'image';
+      fileUrl = await uploadToCloudinary(req.file.buffer, 'quests', mediaType);
+    }
 
     await runQuery(
       `INSERT INTO quest_submissions
-        (questId, userId, fileUrl, type, status, points, createdAt)
-       VALUES (?, ?, ?, ?, 'approved', ?, datetime('now'))`,
-      [quest.id, userId, filePath, 'file', WEEKLY_QUEST_POINTS]
+        ("questId", "userId", "fileUrl", type, status, points, "createdAt")
+       VALUES ($1, $2, $3, $4, 'approved', $5, CURRENT_TIMESTAMP)`,
+      [quest.id, userId, fileUrl, 'file', WEEKLY_QUEST_POINTS]
     );
 
     await runQuery(
-      `UPDATE users SET totalPoints = totalPoints + ? WHERE id = ?`,
+      `UPDATE users SET "totalPoints" = "totalPoints" + $1 WHERE id = $2`,
       [WEEKLY_QUEST_POINTS, userId]
     );
 
@@ -453,25 +415,25 @@ app.get('/api/my-uploads', requireLogin, async (req, res) => {
   try {
     const userId = req.session.userId;
     const user = await getOne(
-      `SELECT username, totalPoints, targetDaysPerWeek
-       FROM users WHERE id = ?`,
+      `SELECT username, "totalPoints", "targetDaysPerWeek"
+       FROM users WHERE id = $1`,
       [userId]
     );
 
     const uploads = await getAll(
-      `SELECT fileUrl, type, points, status, createdAt
+      `SELECT "fileUrl", type, points, status, "createdAt"
        FROM submissions
-       WHERE userId = ?
-       ORDER BY datetime(createdAt) DESC`,
+       WHERE "userId" = $1
+       ORDER BY "createdAt" DESC`,
       [userId]
     );
 
     const questUploads = await getAll(
-      `SELECT q.title, qs.fileUrl, qs.points, qs.status, qs.createdAt
+      `SELECT q.title, qs."fileUrl", qs.points, qs.status, qs."createdAt"
        FROM quest_submissions qs
-       JOIN quests q ON q.id = qs.questId
-       WHERE qs.userId = ?
-       ORDER BY datetime(qs.createdAt) DESC`,
+       JOIN quests q ON q.id = qs."questId"
+       WHERE qs."userId" = $1
+       ORDER BY qs."createdAt" DESC`,
       [userId]
     );
 
@@ -490,15 +452,15 @@ app.get('/api/user/:id', requireLogin, async (req, res) => {
       `SELECT
          id,
          username,
-         avatarUrl,
+         "avatarUrl",
          age,
-         heightCm,
-         weightKg,
+         "heightCm",
+         "weightKg",
          bio,
-         totalPoints,
-         targetDaysPerWeek
+         "totalPoints",
+         "targetDaysPerWeek"
        FROM users
-       WHERE id = ?`,
+       WHERE id = $1`,
       [userId]
     );
 
@@ -507,19 +469,19 @@ app.get('/api/user/:id', requireLogin, async (req, res) => {
     }
 
     const uploads = await getAll(
-      `SELECT fileUrl, type, points, status, createdAt
+      `SELECT "fileUrl", type, points, status, "createdAt"
        FROM submissions
-       WHERE userId = ?
-       ORDER BY datetime(createdAt) DESC`,
+       WHERE "userId" = $1
+       ORDER BY "createdAt" DESC`,
       [userId]
     );
 
     const questUploads = await getAll(
-      `SELECT q.title, qs.fileUrl, qs.points, qs.status, qs.createdAt
+      `SELECT q.title, qs."fileUrl", qs.points, qs.status, qs."createdAt"
        FROM quest_submissions qs
-       JOIN quests q ON q.id = qs.questId
-       WHERE qs.userId = ?
-       ORDER BY datetime(qs.createdAt) DESC`,
+       JOIN quests q ON q.id = qs."questId"
+       WHERE qs."userId" = $1
+       ORDER BY qs."createdAt" DESC`,
       [userId]
     );
 
@@ -536,7 +498,7 @@ app.get('/api/user/:id', requireLogin, async (req, res) => {
 app.get('/make-me-admin', requireLogin, async (req, res) => {
   try {
     await runQuery(
-      `UPDATE users SET isAdmin = 1 WHERE id = ?`,
+      `UPDATE users SET "isAdmin" = 1 WHERE id = $1`,
       [req.session.userId]
     );
     res.send('You are now admin. Go to admin.html.');
@@ -553,15 +515,15 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
          u.id,
          u.username,
          u.email,
-         u.totalPoints,
-         u.isAdmin,
-         COUNT(DISTINCT s.id)  AS uploadCount,
-         COUNT(DISTINCT qs.id) AS questCount
+         u."totalPoints",
+         u."isAdmin",
+         COUNT(DISTINCT s.id)  AS "uploadCount",
+         COUNT(DISTINCT qs.id) AS "questCount"
        FROM users u
-       LEFT JOIN submissions s      ON s.userId = u.id
-       LEFT JOIN quest_submissions qs ON qs.userId = u.id
+       LEFT JOIN submissions s      ON s."userId" = u.id
+       LEFT JOIN quest_submissions qs ON qs."userId" = u.id
        GROUP BY u.id
-       ORDER BY u.totalPoints DESC`
+       ORDER BY u."totalPoints" DESC`
     );
     res.json({ users });
   } catch (err) {
@@ -580,12 +542,12 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     }
 
     // Remove related records first
-    await runQuery(`DELETE FROM submissions WHERE userId = ?`, [userId]);
-    await runQuery(`DELETE FROM daily_status WHERE userId = ?`, [userId]);
-    await runQuery(`DELETE FROM quest_submissions WHERE userId = ?`, [userId]);
+    await runQuery(`DELETE FROM submissions WHERE "userId" = $1`, [userId]);
+    await runQuery(`DELETE FROM daily_status WHERE "userId" = $1`, [userId]);
+    await runQuery(`DELETE FROM quest_submissions WHERE "userId" = $1`, [userId]);
 
     // Finally remove the user
-    await runQuery(`DELETE FROM users WHERE id = ?`, [userId]);
+    await runQuery(`DELETE FROM users WHERE id = $1`, [userId]);
 
     res.json({ message: 'User and related data deleted.' });
   } catch (err) {
@@ -599,8 +561,8 @@ app.post('/api/admin/quests', requireAdmin, async (req, res) => {
   try {
     const { title, description, startDate, endDate } = req.body;
     await runQuery(
-      `INSERT INTO quests (title, description, startDate, endDate, pointsReward)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO quests (title, description, "startDate", "endDate", "pointsReward")
+       VALUES ($1, $2, $3, $4, $5)`,
       [title, description, startDate, endDate, WEEKLY_QUEST_POINTS]
     );
     res.json({ message: 'Quest created.' });
@@ -615,12 +577,12 @@ app.get('/api/admin/quests', requireAdmin, async (req, res) => {
     const quests = await getAll(
       `SELECT
          q.*,
-         SUM(CASE WHEN qs.status = 'approved' THEN 1 ELSE 0 END) AS completedCount,
-         SUM(CASE WHEN qs.status = 'missed' THEN 1 ELSE 0 END)   AS missedCount
+         SUM(CASE WHEN qs.status = 'approved' THEN 1 ELSE 0 END) AS "completedCount",
+         SUM(CASE WHEN qs.status = 'missed' THEN 1 ELSE 0 END)   AS "missedCount"
        FROM quests q
-       LEFT JOIN quest_submissions qs ON qs.questId = q.id
+       LEFT JOIN quest_submissions qs ON qs."questId" = q.id
        GROUP BY q.id
-       ORDER BY q.startDate DESC`
+       ORDER BY q."startDate" DESC`
     );
     res.json({ quests });
   } catch (err) {
@@ -635,13 +597,13 @@ app.delete('/api/admin/quests/:id', requireAdmin, async (req, res) => {
 
     // delete related submissions first
     await runQuery(
-      `DELETE FROM quest_submissions WHERE questId = ?`,
+      `DELETE FROM quest_submissions WHERE "questId" = $1`,
       [questId]
     );
 
     // then delete the quest
     await runQuery(
-      `DELETE FROM quests WHERE id = ?`,
+      `DELETE FROM quests WHERE id = $1`,
       [questId]
     );
 
@@ -662,9 +624,9 @@ cron.schedule('30 23 * * *', async () => {
 
     for (const u of users) {
       const row = await getOne(
-        `SELECT uploaded, pointsDelta
+        `SELECT uploaded, "pointsDelta"
          FROM daily_status
-         WHERE userId = ? AND date = ?`,
+         WHERE "userId" = $1 AND date = $2`,
         [u.id, today]
       );
 
@@ -680,15 +642,15 @@ cron.schedule('30 23 * * *', async () => {
 
       // Case 3: no row at all (or some other weird state) → apply -1
       await runQuery(
-        `UPDATE users SET totalPoints = totalPoints + ? WHERE id = ?`,
+        `UPDATE users SET "totalPoints" = "totalPoints" + $1 WHERE id = $2`,
         [DAILY_MISS_PENALTY, u.id]
       );
 
       await runQuery(
-        `INSERT INTO daily_status (userId, date, uploaded, pointsDelta)
-         VALUES (?, ?, 0, ?)
-         ON CONFLICT(userId, date)
-         DO UPDATE SET uploaded = 0, pointsDelta = ?`,
+        `INSERT INTO daily_status ("userId", date, uploaded, "pointsDelta")
+         VALUES ($1, $2, 0, $3)
+         ON CONFLICT ("userId", date)
+         DO UPDATE SET uploaded = 0, "pointsDelta" = $4`,
         [u.id, today, DAILY_MISS_PENALTY, DAILY_MISS_PENALTY]
       );
     }
@@ -704,7 +666,7 @@ cron.schedule('45 23 * * *', async () => {
   try {
     const today = todayDateStr();
     const quests = await getAll(
-      `SELECT * FROM quests WHERE endDate = ?`,
+      `SELECT * FROM quests WHERE "endDate" = $1`,
       [today]
     );
     const users = await getAll(`SELECT id FROM users`);
@@ -713,20 +675,20 @@ cron.schedule('45 23 * * *', async () => {
       for (const u of users) {
         const completed = await getOne(
           `SELECT id FROM quest_submissions
-           WHERE questId = ? AND userId = ? AND status = 'approved'`,
+           WHERE "questId" = $1 AND "userId" = $2 AND status = 'approved'`,
           [quest.id, u.id]
         );
 
         if (!completed) {
           await runQuery(
-            `UPDATE users SET totalPoints = totalPoints + ? WHERE id = ?`,
+            `UPDATE users SET "totalPoints" = "totalPoints" + $1 WHERE id = $2`,
             [WEEKLY_MISS_PENALTY, u.id]
           );
 
           await runQuery(
             `INSERT INTO quest_submissions
-              (questId, userId, fileUrl, type, status, points, createdAt)
-             VALUES (?, ?, NULL, 'none', 'missed', ?, datetime('now'))`,
+              ("questId", "userId", "fileUrl", type, status, points, "createdAt")
+             VALUES ($1, $2, NULL, 'none', 'missed', $3, CURRENT_TIMESTAMP)`,
             [quest.id, u.id, WEEKLY_MISS_PENALTY]
           );
         }
@@ -740,7 +702,12 @@ cron.schedule('45 23 * * *', async () => {
 });
 
 // ---------- START SERVER ----------
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+initializeDatabase().then(() => {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });
 
