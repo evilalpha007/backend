@@ -29,7 +29,7 @@ const DAILY_END_HOUR = 22;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'super-secret-key',
+  secret:  'super-secret-key',
   resave: false,
   saveUninitialized: false
 }));
