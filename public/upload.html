@@ -243,6 +243,10 @@
       </button>
     </form>
 
+    <button id="rest-day-btn" onclick="takeRestDay()" class="w-full mt-4 py-3.5 px-4 border-2 border-purple-400/50 rounded-lg text-purple-300 text-base font-semibold cursor-pointer bg-transparent hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300">
+      🛌 Take Rest Day (Once per Week)
+    </button>
+
     <p id="msg" class="mt-4 text-sm text-center text-purple-300"></p>
   </div>
 </main>
@@ -277,9 +281,11 @@ function checkUploadWindow() {
   const form = document.getElementById('upload-form');
   const msg = document.getElementById('msg');
   const card = document.querySelector('.glass-card');
+  const restDayBtn = document.getElementById('rest-day-btn');
 
   if (!isWindowOpen) {
     form.style.display = 'none';
+    restDayBtn.style.display = 'none';
     msg.innerHTML = '<span class="text-xl">⛔</span><br>Upload window is closed.<br>Please come back between 6 PM and 10 PM.';
     msg.className = 'mt-4 text-center text-red-300 font-bold text-lg';
   }
@@ -308,6 +314,20 @@ document.querySelectorAll('input[name="workoutType"]').forEach(r => {
 
 // initial state
 updateAccept();
+
+// Update file name display when file is selected
+fileInput.addEventListener('change', function() {
+  const fileNameDisplay = document.getElementById('file-name');
+  if (this.files && this.files[0]) {
+    const fileName = this.files[0].name;
+    const fileSize = (this.files[0].size / (1024 * 1024)).toFixed(2); // Convert to MB
+    fileNameDisplay.textContent = `${fileName} (${fileSize} MB)`;
+    fileNameDisplay.style.color = '#a78bfa'; // Purple color to show selection
+  } else {
+    fileNameDisplay.textContent = 'No file selected';
+    fileNameDisplay.style.color = '';
+  }
+});
 
 // Handle daily upload
 document.getElementById('upload-form').addEventListener('submit', async (e) => {
@@ -342,6 +362,43 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
   const data = await res.json();
   msg.textContent = data.message || data.error || '';
 });
+
+// Handle rest day
+async function takeRestDay() {
+  const msg = document.getElementById('msg');
+  msg.textContent = '';
+  
+  if (!confirm('Are you sure you want to use your weekly rest day for today? You can only take one rest day per week.')) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/daily-off', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    
+    if (res.ok) {
+      msg.textContent = data.message || 'Rest day saved!';
+      msg.className = 'mt-4 text-sm text-center text-green-300 font-semibold';
+      
+      // Hide the form and rest day button after successful rest day
+      document.getElementById('upload-form').style.display = 'none';
+      document.getElementById('rest-day-btn').style.display = 'none';
+    } else {
+      msg.textContent = data.error || 'Failed to set rest day.';
+      msg.className = 'mt-4 text-sm text-center text-red-300';
+    }
+  } catch (err) {
+    console.error(err);
+    msg.textContent = 'Error setting rest day.';
+    msg.className = 'mt-4 text-sm text-center text-red-300';
+  }
+}
 </script>
 
 </body>
