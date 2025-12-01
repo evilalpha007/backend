@@ -253,15 +253,34 @@ app.post('/api/upload', requireLogin, upload.single('file'), async (req, res) =>
 
     // 2) Detect media type (photo or video)
     const mime = req.file.mimetype;
-    const mediaType = mime.startsWith('video/') ? 'video' : 'photo';
+    const isVideo = mime.startsWith('video/');
+    const mediaType = isVideo ? 'video' : 'photo'; // For database
+    const cloudinaryResourceType = isVideo ? 'video' : 'image'; // For Cloudinary
 
     // 3) Rule: home workout must be video only
-    if (workoutType === 'home' && mediaType !== 'video') {
+    if (workoutType === 'home' && !isVideo) {
       return res.status(400).json({ error: 'Home workout uploads must be video only.' });
     }
 
+    // Check Cloudinary configuration
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('Cloudinary configuration missing!');
+      return res.status(500).json({ 
+        error: 'Server configuration error: Cloudinary credentials not set. Please contact administrator.' 
+      });
+    }
+
     // Upload to Cloudinary
-    const fileUrl = await uploadToCloudinary(req.file.buffer, 'daily', mediaType);
+    let fileUrl;
+    try {
+      fileUrl = await uploadToCloudinary(req.file.buffer, 'daily', cloudinaryResourceType);
+    } catch (cloudinaryError) {
+      console.error('Cloudinary upload error:', cloudinaryError);
+      return res.status(500).json({ 
+        error: 'Failed to upload file to cloud storage. Please try again or contact administrator.',
+        details: cloudinaryError.message 
+      });
+    }
 
     // 4) Insert submission with workoutType
     await runQuery(
@@ -287,11 +306,14 @@ app.post('/api/upload', requireLogin, upload.single('file'), async (req, res) =>
     );
 
     res.json({
-      message: `Upload saved as ${workoutType === 'home' ? 'Home workout' : 'Gym'} (${mediaType}).`
+      message: `Upload saved as ${workoutType === 'home' ? 'Home workout' : 'Gym'} (${mediaType}). +${DAILY_UPLOAD_POINTS} points!`
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Upload failed.' });
+    console.error('Upload error:', err);
+    res.status(500).json({ 
+      error: 'Upload failed: ' + (err.message || 'Unknown error'),
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 

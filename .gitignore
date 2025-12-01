@@ -2,7 +2,6 @@
 node_modules/
 
 # Environment variables
-.env
 
 # Database
 *.db
@@ -18,3 +17,4 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+config.bat

@@ -354,13 +354,30 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
   formData.append('file', file);
   formData.append('workoutType', selectedType);
 
-  const res = await fetch('/api/upload', {
-    method: 'POST',
-    body: formData
-  });
+  try {
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    });
 
-  const data = await res.json();
-  msg.textContent = data.message || data.error || '';
+    // Check if response is JSON
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await res.json();
+      msg.textContent = data.message || data.error || '';
+      msg.className = res.ok ? 'mt-4 text-sm text-center text-green-300 font-semibold' : 'mt-4 text-sm text-center text-red-300';
+    } else {
+      // Server returned HTML or other non-JSON response
+      const text = await res.text();
+      console.error('Server error:', text);
+      msg.textContent = `Upload failed. Server error (Status: ${res.status}). Check console for details.`;
+      msg.className = 'mt-4 text-sm text-center text-red-300';
+    }
+  } catch (err) {
+    console.error('Upload error:', err);
+    msg.textContent = 'Upload failed. Please check your connection and try again.';
+    msg.className = 'mt-4 text-sm text-center text-red-300';
+  }
 });
 
 // Handle rest day
