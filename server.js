@@ -345,8 +345,8 @@ app.get('/api/current-quest', async (req, res) => {
     const today = todayDateStr();
     const quest = await getOne(
       `SELECT * FROM quests
-       WHERE startDate <= ? AND endDate >= ?
-       ORDER BY startDate DESC
+       WHERE "startDate" <= $1 AND "endDate" >= $2
+       ORDER BY "startDate" DESC
        LIMIT 1`,
       [today, today]
     );
